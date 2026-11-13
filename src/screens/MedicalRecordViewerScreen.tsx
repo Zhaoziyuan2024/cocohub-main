@@ -13,6 +13,8 @@ import {
 } from 'react-native';
 
 import MedicalRecordAttachments from '../components/MedicalRecordAttachments';
+import { EmptyState } from '../components/EmptyState';
+import { useTheme } from '../context/ThemeContext';
 import {
   getMedicalRecords,
   searchMedicalRecords,
@@ -21,6 +23,7 @@ import {
 } from '../services/medicalRecordService';
 import { requireBiometric, verifyPin } from '../services/authService';
 import sessionMonitoringService from '../services/sessionMonitoringService';
+import { getRecordEmptyState } from '../utils/recordEmptyState';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -56,6 +59,7 @@ type AuthGateState = 'checking' | 'authenticated' | 'pin_required' | 'failed';
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const MedicalRecordViewerScreen: React.FC<Props> = ({ petId, petName, onBack }) => {
+  const { colors } = useTheme();
   const [authState, setAuthState] = useState<AuthGateState>('checking');
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState('');
@@ -310,10 +314,22 @@ const MedicalRecordViewerScreen: React.FC<Props> = ({ petId, petName, onBack }) 
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
+  const emptyState = getRecordEmptyState({
+    isSearchMode,
+    searchQuery,
+    hasFilters: Boolean(selectedType || startDate || endDate),
+    petName,
+  });
+  const handleEmptyStatePress = () => {
+    if (emptyState.action === 'clearSearch') clearSearch();
+    else if (emptyState.action === 'clearFilters') resetFilters();
+    else onBack();
+  };
+
   // ── Auth gate: show authentication screen until verified ──
   if (authState === 'checking') {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.authGateContainer}>
           <ActivityIndicator size="large" color="#10B981" />
           <Text style={styles.authGateText}>Verifying authentication…</Text>
@@ -324,7 +340,7 @@ const MedicalRecordViewerScreen: React.FC<Props> = ({ petId, petName, onBack }) 
 
   if (authState === 'failed') {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.authGateContainer}>
           <Text style={styles.authGateTitle}>Authentication Required</Text>
           <Text style={styles.authGateDescription}>
@@ -340,7 +356,7 @@ const MedicalRecordViewerScreen: React.FC<Props> = ({ petId, petName, onBack }) 
 
   if (authState === 'pin_required') {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.authGateContainer}>
           <Text style={styles.authGateTitle}>Enter PIN</Text>
           <Text style={styles.authGateDescription}>
@@ -374,13 +390,13 @@ const MedicalRecordViewerScreen: React.FC<Props> = ({ petId, petName, onBack }) 
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.surface }]}>
         <TouchableOpacity onPress={onBack} accessibilityRole="button" accessibilityLabel="Back">
           <Text style={styles.backText}>‹ Back</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
           {petName ? `${petName}'s Records` : 'Medical Records'}
         </Text>
         <TouchableOpacity
@@ -393,11 +409,11 @@ const MedicalRecordViewerScreen: React.FC<Props> = ({ petId, petName, onBack }) 
       </View>
 
       {/* Search bar */}
-      <View style={styles.searchRow}>
+      <View style={[styles.searchRow, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { backgroundColor: colors.input, color: colors.text, borderColor: colors.border }]}
           placeholder="Search records…"
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor={colors.placeholder}
           value={searchQuery}
           onChangeText={setSearchQuery}
           onSubmitEditing={() => void handleSearch()}
@@ -468,9 +484,13 @@ const MedicalRecordViewerScreen: React.FC<Props> = ({ petId, petName, onBack }) 
           // Layout
           contentContainerStyle={records.length === 0 ? styles.emptyContainer : styles.list}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>
-              {isSearchMode ? `No results for "${searchQuery}".` : 'No records found.'}
-            </Text>
+            <EmptyState
+              icon={emptyState.icon}
+              title={emptyState.title}
+              description={emptyState.description}
+              buttonText={emptyState.buttonText}
+              onPress={handleEmptyStatePress}
+            />
           }
         />
       )}
@@ -550,12 +570,12 @@ const MedicalRecordViewerScreen: React.FC<Props> = ({ petId, petName, onBack }) 
       {/* ── Detail Modal ── */}
       {detailRecord && (
         <Modal visible animationType="slide" onRequestClose={() => setDetailRecord(null)}>
-          <View style={styles.container}>
-            <View style={styles.header}>
+          <View style={[styles.container, { backgroundColor: colors.background }]}>
+            <View style={[styles.header, { backgroundColor: colors.surface }]}>
               <TouchableOpacity onPress={() => setDetailRecord(null)}>
                 <Text style={styles.backText}>‹ Back</Text>
               </TouchableOpacity>
-              <Text style={styles.headerTitle}>Record Details</Text>
+              <Text style={[styles.headerTitle, { color: colors.text }]}>Record Details</Text>
               <View style={{ width: 50 }} />
             </View>
             <ScrollView contentContainerStyle={styles.detailBody}>
@@ -772,7 +792,7 @@ const styles = StyleSheet.create({
   chipClearText: { fontSize: 12, color: '#991B1B', fontWeight: '600' },
   loader: { marginTop: 40 },
   list: { padding: 12, paddingBottom: 24 },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 80 },
+  emptyContainer: { flexGrow: 1, justifyContent: 'center', paddingBottom: 24 },
   emptyText: { color: '#9CA3AF', fontSize: 15, textAlign: 'center' },
   card: {
     backgroundColor: '#fff',
