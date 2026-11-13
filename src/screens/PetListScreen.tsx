@@ -147,10 +147,10 @@ const PetListScreen: React.FC<Props> = ({ onSelectPet, onAddPet, onAdoptPet }) =
   );
 
   return (
-    <View style={styles.container} testID="pet-list-screen">
-      <View style={styles.header}>
+    <View style={[styles.container, { backgroundColor: colors.background }]} testID="pet-list-screen">
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <View style={styles.titleRow}>
-          <Text style={styles.title}>My Pets</Text>
+          <Text style={[styles.title, { color: colors.text }]}>My Pets</Text>
           <HeaderOfflineStatus />
         </View>
         <TouchableOpacity
@@ -175,7 +175,7 @@ const PetListScreen: React.FC<Props> = ({ onSelectPet, onAddPet, onAdoptPet }) =
       </View>
 
       {/* Pet selector bar — Issue #151/#82 */}
-      <PetSelectorBar onAddPet={handleAddPet} />
+      {hasData ? <PetSelectorBar onAddPet={handleAddPet} /> : null}
 
       {!offlineStatus?.isOnline ? (
         <View style={styles.cachedBanner}>
@@ -184,7 +184,7 @@ const PetListScreen: React.FC<Props> = ({ onSelectPet, onAddPet, onAdoptPet }) =
       ) : null}
 
       {/* Aggregate view — Issue #151/#82 */}
-      <PetAggregateView onSelectPet={onSelectPet} />
+      {hasData ? <PetAggregateView onSelectPet={onSelectPet} /> : null}
 
       {retryState.error && !hasData ? (
         <RetryError
@@ -208,14 +208,17 @@ const PetListScreen: React.FC<Props> = ({ onSelectPet, onAddPet, onAdoptPet }) =
           keyExtractor={(p) => p.id}
           renderItem={renderItem}
           getItemLayout={getItemLayout}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={hasData ? styles.list : [styles.list, styles.emptyList]}
           ListEmptyComponent={
             <EmptyState
               icon="paw"
-              title="No Pets Yet"
-              description="Get started by adding your first pet's profile to Cocohub."
+              emoji="🐾"
+              title="No pets yet"
+              description="Add your first pet to start keeping their health records in one place."
               buttonText="Add your first pet"
               onPress={handleAddPet}
+              secondaryText="Browse pets for adoption"
+              onSecondaryPress={onAdoptPet}
             />
           }
           refreshControl={
@@ -278,6 +281,7 @@ const styles = StyleSheet.create({
   adoptBtnText: { color: '#fff', fontWeight: '600' },
   loader: { marginTop: 40 },
   list: { padding: 12 },
+  emptyList: { flexGrow: 1 },
   cachedBanner: {
     backgroundColor: '#fff3e0',
     borderBottomWidth: 1,
